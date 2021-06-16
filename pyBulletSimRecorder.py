@@ -6,7 +6,7 @@ from urdfpy import URDF
 from os.path import abspath, dirname, basename, splitext
 from transforms3d.affines import decompose
 from transforms3d.quaternions import mat2quat
-
+import numpy as np
 
 class PyBulletRecorder:
     class LinkTracker:
@@ -56,47 +56,31 @@ class PyBulletRecorder:
         self.states = []
         self.links = []
 
-    def register_object(self, body_id, urdf_path):
+    def register_object(self, body_id, urdf_path, global_scaling=1):
+        link_id_map = dict()
+        n = p.getNumJoints(body_id)
+        link_id_map[p.getBodyInfo(body_id)[0].decode('gb2312')] = -1
+        for link_id in range(0, n):
+            link_id_map[p.getJointInfo(body_id, link_id)[12].decode('gb2312')] = link_id
+
         dir_path = dirname(abspath(urdf_path))
         file_name = splitext(basename(urdf_path))[0]
         robot = URDF.load(urdf_path)
-        if len(robot.links) == 1:
-            self.links.append(
-                PyBulletRecorder.LinkTracker(
-                    name=file_name + f'_{body_id}_root',
-                    body_id=body_id,
-                    link_id=-1,
-                    link_origin=robot.links[0].visuals[0].origin,
-                    mesh_path=dir_path + '/' +
-                    robot.links[0].visuals[0].geometry.mesh.filename,
-                    mesh_scale=robot.links[0].visuals[0].geometry.mesh.scale))
-        else:
-            self.links.append(
-                PyBulletRecorder.LinkTracker(
-                    name=file_name + f'_{body_id}_root',
-                    body_id=body_id,
-                    link_id=-1,
-                    link_origin=robot.links[0].visuals[0].origin,
-                    mesh_path=dir_path + '/' +
-                    robot.links[0].visuals[0].geometry.mesh.filename,
-                    mesh_scale=robot.links[0].visuals[0].geometry.mesh.scale))
-            for link_id, link in enumerate(robot.links):
-                if link_id == 0:
-                    continue
-                link_id -= 1
-                if len(link.visuals) > 0:
-                    if p.getLinkState(body_id, link_id) is not None\
-                            and link.visuals[0].geometry.mesh:
-                        # hard code for robotiq
-                        self.links.append(
-                            PyBulletRecorder.LinkTracker(
-                                name=file_name + f'_{body_id}_{link.name}',
-                                body_id=body_id,
-                                link_id=link_id,
-                                link_origin=link.visuals[0].origin,
-                                mesh_path=dir_path + '/' +
-                                link.visuals[0].geometry.mesh.filename,
-                                mesh_scale=link.visuals[0].geometry.mesh.scale))
+        for link in robot.links:
+            link_id = link_id_map[link.name]
+            if len(link.visuals) > 0:
+                for i, link_visual in enumerate(link.visuals):
+                    mesh_scale = [global_scaling, global_scaling, global_scaling] if link_visual.geometry.mesh.scale is None \
+                        else link_visual.geometry.mesh.scale * global_scaling
+                    self.links.append(
+                        PyBulletRecorder.LinkTracker(
+                            name=file_name + f'_{body_id}_{link.name}_{i}',
+                            body_id=body_id,
+                            link_id=link_id,
+                            link_origin=link_visual.origin * global_scaling,
+                            mesh_path=dir_path + '/' +
+                            link_visual.geometry.mesh.filename,
+                            mesh_scale=mesh_scale))
 
     def add_keyframe(self):
         # Ideally, call every p.stepSimulation()
