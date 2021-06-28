@@ -38,7 +38,10 @@ class ANIM_OT_import_pybullet_sim(Operator, ImportHelper):
     filter_glob: StringProperty(
         default='*.pkl',
         options={'HIDDEN'})
-    skip_frames = 1  # TODO turn into option during import
+    skip_frames:  bpy.props.IntProperty(
+        name="Skip Frames", default=10, min=1, max=100)
+    max_frames:  bpy.props.IntProperty(
+        name="Max Frames", default=-1, min=-1, max=100000)
 
     def execute(self, context):
         for file in self.files:
@@ -107,6 +110,13 @@ class ANIM_OT_import_pybullet_sim(Operator, ImportHelper):
                             pybullet_obj['frames']):
                         if frame_count % self.skip_frames != 0:
                             continue
+                        if self.max_frames > 1 and frame_count > self.max_frames:
+                            print('Exceed max frame count')
+                            break
+                        percentage_done = frame_count / \
+                            len(pybullet_obj['frames'])
+                        print(f'\r[{percentage_done*100:.01f}% | {obj_key}]',
+                              '#' * int(60*percentage_done), end='')
                         pos = frame_data['position']
                         orn = frame_data['orientation']
                         context.scene.frame_set(
