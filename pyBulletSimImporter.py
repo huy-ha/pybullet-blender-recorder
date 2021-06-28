@@ -59,7 +59,8 @@ class ANIM_OT_import_pybullet_sim(Operator, ImportHelper):
                     pybullet_obj = data[obj_key]
                     # Load mesh of each link
                     assert pybullet_obj['type'] == 'mesh'
-                    extension = splitext(pybullet_obj['mesh_path'])[1]
+                    extension = pybullet_obj['mesh_path'].split(
+                        ".")[-1].lower()
                     # Handle different mesh formats
                     if 'obj' in extension:
                         bpy.ops.import_scene.obj(
@@ -73,7 +74,7 @@ class ANIM_OT_import_pybullet_sim(Operator, ImportHelper):
                             filepath=pybullet_obj['mesh_path'])
                     else:
                         print("Unsupported File Format:{}".format(extension))
-                        return
+                        pass
 
                     # Delete lights and camera
                     parts = 0
