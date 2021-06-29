@@ -16,7 +16,7 @@ bl_info = {
     "name": "PyBulletSimImporter",
     "author": "Huy Ha <hqh2101@columbia.edu>",
     "version": (0, 0, 1),
-    "blender": (2, 80, 0),
+    "blender": (2, 92, 0),
     "location": "3D View > Toolbox > Animation tab > PyBullet Simulation Importer",
     "description": "Imports PyBullet Simulation Results",
     "warning": "",

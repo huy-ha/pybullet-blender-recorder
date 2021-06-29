@@ -8,6 +8,7 @@ from transforms3d.affines import decompose
 from transforms3d.quaternions import mat2quat
 import numpy as np
 
+
 class PyBulletRecorder:
     class LinkTracker:
         def __init__(self,
@@ -61,7 +62,8 @@ class PyBulletRecorder:
         n = p.getNumJoints(body_id)
         link_id_map[p.getBodyInfo(body_id)[0].decode('gb2312')] = -1
         for link_id in range(0, n):
-            link_id_map[p.getJointInfo(body_id, link_id)[12].decode('gb2312')] = link_id
+            link_id_map[p.getJointInfo(body_id, link_id)[
+                12].decode('gb2312')] = link_id
 
         dir_path = dirname(abspath(urdf_path))
         file_name = splitext(basename(urdf_path))[0]
@@ -70,14 +72,23 @@ class PyBulletRecorder:
             link_id = link_id_map[link.name]
             if len(link.visuals) > 0:
                 for i, link_visual in enumerate(link.visuals):
-                    mesh_scale = [global_scaling, global_scaling, global_scaling] if link_visual.geometry.mesh.scale is None \
+                    mesh_scale = [global_scaling,
+                                  global_scaling, global_scaling]\
+                        if link_visual.geometry.mesh.scale is None \
                         else link_visual.geometry.mesh.scale * global_scaling
                     self.links.append(
                         PyBulletRecorder.LinkTracker(
                             name=file_name + f'_{body_id}_{link.name}_{i}',
                             body_id=body_id,
                             link_id=link_id,
-                            link_origin=link_visual.origin * global_scaling,
+                            link_origin=  # If link_id == -1 then is base link,
+                            # PyBullet will return
+                            # inertial_origin @ visual_origin,
+                            # so need to undo that transform
+                            (np.linalg.inv(link.inertial.origin)
+                             if link_id == -1
+                             else np.identity(4)) @
+                            link_visual.origin * global_scaling,
                             mesh_path=dir_path + '/' +
                             link_visual.geometry.mesh.filename,
                             mesh_scale=mesh_scale))
